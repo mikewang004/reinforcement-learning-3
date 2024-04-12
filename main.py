@@ -11,6 +11,17 @@ import numpy as np
 import os
 os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
 
+
+def entropy(p):
+    """Calculates entropy as H = - sum_i p_i * log(p_i) while assuming base e. Refer for further details to 
+    'Deep Reinforcement Learning' p.111.
+    See also the paper by Duan et al. 'Benchmarking Deep Reinforcement Learning for Continuous Control'."""
+    return np.sum(p * np.ln(p))
+
+def entropy_optimalisation(theta):
+    pass
+
+
 def main():
     #print('Device is:{}'.format(torch.cuda.get_device_name(0)))
     env = gym.make("LunarLander-v2", render_mode="human")
