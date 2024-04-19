@@ -13,7 +13,7 @@ import numpy as np
 import os
 
 
-def create_model(no_obs, no_actions, no_hidden_layers = 64):
+def create_model(no_obs, no_actions, no_hidden_layers = 8):
 
         return nn.Sequential(
         nn.Linear(in_features=no_obs,
@@ -24,18 +24,18 @@ def create_model(no_obs, no_actions, no_hidden_layers = 64):
     )
 
 
-def reinforce(model, observation):
-    observation_tensor = torch.as_tensor(observation, dtype=torch.float32)
-    logits = model(observation_tensor)
+def reinforce(model, obs):
+    observation_tensor = torch.as_tensor(obs, dtype=torch.float32)
+    logits = model(observation_tensor.unsqueeze(dim=1))
 
     # Categorical will also normalize the logits for us
     return Categorical(logits=logits)
 
 def choose_action(pi):
-    a = pi.sample().item()
+    a = pi.sample()
     log_probability_action = pi.log_prob(a)
 
-    return a, log_probability_action
+    return int(a.item()), log_probability_action
 
 def get_loss(eps_log_prob, eps_actions_rewards):
     return -(eps_log_prob * eps_actions_rewards).mean()
@@ -53,9 +53,9 @@ def train_model(env, model, optimizer, max_timesteps = 2000, eps_timesteps = 200
         eps_reward = 0
         obs = env.reset()
         for i in range(eps_timesteps):
-            policy = reinforce(model, obs)
-            action, log_probability_action = get_action(policy)
-            obs, reward, done, _ = env.step(action)
+            policy = reinforce(model, obs[0])
+            action, log_probability_action = choose_action(policy)
+            obs, reward, done, _, _ = env.step(action)
 
             eps_reward += reward
 
@@ -96,7 +96,6 @@ def train(epochs=40) -> None:
 
     # Create the optimizer
     optimizer = Adam(model.parameters(), 1e-2)
-
     # Loop for each epoch
     for epoch in range(epochs):
         average_return = train_model(env, model, optimizer)
