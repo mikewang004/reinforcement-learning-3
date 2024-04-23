@@ -26,7 +26,7 @@ def create_model(no_obs, no_actions, no_hidden_layers = 8):
 
 def reinforce(model, obs):
     observation_tensor = torch.as_tensor(obs, dtype=torch.float32)
-    logits = model(observation_tensor.unsqueeze(dim=1))
+    logits = model(observation_tensor.unsqueeze(0))
 
     # Categorical will also normalize the logits for us
     return Categorical(logits=logits)
@@ -78,7 +78,7 @@ def train_model(env, model, optimizer, max_timesteps = 2000, eps_timesteps = 200
 
     return np.mean(epoch_returns)
 
-def train(epochs=40) -> None:
+def train(epochs=40):
     """Train a Vanilla Policy Gradient model on CartPole
 
     Args:
@@ -105,10 +105,3 @@ def train(epochs=40) -> None:
 if __name__ == '__main__':
     train()
 
-def main():
-    #print('Device is:{}'.format(torch.cuda.get_device_name(0)))
-    env = gym.make("LunarLander-v2", render_mode="human")
-    
-
-if __name__ == "__main__":
-    main()
