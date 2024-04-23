@@ -31,14 +31,10 @@ class Policy(nn.Module):
         return F.softmax(action_scores, dim=1)
 
 
-policy = Policy()
 
 
-optimizer = optim.Adam(policy.parameters(), lr=1e-2)
-eps = np.finfo(np.float32).eps.item()
 
-
-def select_action(state):
+def select_action(state, policy):
     state = torch.from_numpy(state).float().unsqueeze(0)
     probs = policy(state)
     m = Categorical(probs)
@@ -48,7 +44,7 @@ def select_action(state):
 
 
 
-def finish_episode():
+def finish_episode(policy, eps, optimizer):
     R = 0
     policy_loss = []
     rewards = []
@@ -68,19 +64,22 @@ def finish_episode():
 
 
 def main():
-    env = gym.make("LunarLander-v2", render_mode = "human")
+    env = gym.make("LunarLander-v2")
+    policy = Policy()
+    optimizer = optim.Adam(policy.parameters(), lr=1e-2)
+    eps = np.finfo(np.float32).eps.item()
     running_reward = 10
     for i_episode in count(1):
         state = env.reset()[0]
         for t in range(10000):  # Don't infinite loop while learning
-            action = select_action(state)
+            action = select_action(state, policy)
             state, reward, done, _, _ = env.step(action)
             policy.rewards.append(reward)
             if done:
                 break
 
         running_reward = running_reward * 0.99 + t * 0.01
-        finish_episode()
+        finish_episode(policy, eps, optimizer)
         if i_episode % log_interval == 0:
             print('Episode {}\tLast length: {:5d}\tAverage length: {:.2f}'.format(
                 i_episode, t, running_reward))
