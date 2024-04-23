@@ -36,6 +36,8 @@ class Policy(nn.Module):
 
 def select_action(state, policy):
     state = torch.from_numpy(state).float().unsqueeze(0)
+    #print(state)
+    #print(state * np.log(state))
     probs = policy(state)
     m = Categorical(probs)
     action = m.sample()
@@ -78,7 +80,7 @@ def main():
             if done:
                 break
 
-        running_reward = running_reward * 0.99 + t * 0.01
+        running_reward = running_reward * gamma  + t * 0.01 #very weird
         finish_episode(policy, eps, optimizer)
         if i_episode % log_interval == 0:
             print('Episode {}\tLast length: {:5d}\tAverage length: {:.2f}'.format(
