@@ -30,15 +30,15 @@ class Policy(nn.Module):
         action_scores = self.affine2(x)
         return F.softmax(action_scores, dim=1)
 
-
-
-
+def entropy(x):
+    x = x.detach().numpy()
+    return -np.sum(x * np.log(x))
 
 def select_action(state, policy):
     state = torch.from_numpy(state).float().unsqueeze(0)
-    #print(state)
-    #print(state * np.log(state))
     probs = policy(state)
+    probs_entropy = entropy(probs)
+    print(probs_entropy)
     m = Categorical(probs)
     action = m.sample()
     policy.saved_log_probs.append(m.log_prob(action))
