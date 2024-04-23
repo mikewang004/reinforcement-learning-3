@@ -8,6 +8,8 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.distributions.categorical import Categorical
 from torch.optim import Adam, Optimizer
+from torch.distributions.categorical import Categorical
+from torch.optim import Adam, Optimizer
 from itertools import count
 import numpy as np
 import os
@@ -113,3 +115,19 @@ def main():
 
 if __name__ == "__main__":
     main()
+    # Create the MLP model
+    number_observation_features = env.observation_space.shape[0]
+    number_actions = env.action_space.n
+    model = create_model(number_observation_features, number_actions)
+
+    # Create the optimizer
+    optimizer = Adam(model.parameters(), 1e-2)
+    # Loop for each epoch
+    for epoch in range(epochs):
+        average_return = train_model(env, model, optimizer)
+        print('epoch: %3d \t return: %.3f' % (epoch, average_return))
+
+
+if __name__ == '__main__':
+    train()
+
