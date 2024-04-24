@@ -11,7 +11,6 @@ class ACModel(nn.Module):
     def __init__(self):
         super(ACModel, self).__init__()
         self.actor_common = nn.Linear(8, 128)
-
         self.actor_action = nn.Linear(128, 4)
         self.critic_value = nn.Linear(128, 1)
 
@@ -20,7 +19,6 @@ class ACModel(nn.Module):
         self.rewards = []
 
     def forward(self, state):
-
         state = torch.from_numpy(state).float()
         state = F.relu(self.actor_common(state))
 
@@ -41,24 +39,14 @@ class ACModel(nn.Module):
         return entropy
 
     def loss(self, gamma=0.99, entropy_weight=0.01):
-
-        # Calculate discounted rewards
-        rewards = []
-        discounted_reward = 0
-        for reward in self.rewards[::-1]:
-            discounted_reward = reward + gamma * discounted_reward
-            rewards.insert(0, discounted_reward)
-
         rewards = torch.tensor(rewards)
         rewards = (rewards - rewards.mean()) / rewards.std()
 
-        # Calculate loss
         loss = 0
         for log_prob, value, reward in zip(self.log_probs, self.state_values, rewards):
             advantage = reward - value.item()
             loss += (-log_prob * advantage) + F.mse_loss(value, reward)
 
-        # Add entropy term
         entropy = self.calculate_entropy(torch.stack(self.log_probs))
         loss -= entropy_weight * entropy
 
@@ -70,20 +58,14 @@ class ACModel(nn.Module):
         self.rewards.clear()
 
 
-def train():
-    render = False
-    gamma = 0.99
-    lr = 0.02
-    betas = (0.9, 0.999)
-
-    env = gym.make("LunarLander-v2", render_mode="human")
-    env.metadata['render_fps'] = 1024
+def train(render=False, gamma=0.99, lr=0.02, betas=(0.9, 0.999), entropy_weight=0.01, max_episodes=1000, print_freq=10, save_threshold=2500):
+    env = gym.make("LunarLander-v2")
 
     model = ACModel()
     optimizer = torch.optim.Adam(model.parameters(), lr=lr, betas=betas)
 
     running_reward = 0
-    for i in range(1000):
+    for i in range(max_episodes):
         state, _ = env.reset()
         terminated = truncated = False
         for t in range(10000):
@@ -97,21 +79,21 @@ def train():
                 break
 
         optimizer.zero_grad()
-        loss = model.loss(gamma)
+        loss = model.loss(model.rewards, gamma, entropy_weight)
         loss.backward()
         optimizer.step()
         model.clear()
 
-
-        if i % 10 == 0:
-            running_reward = running_reward / 10
-            print('Episode {}\tmean reward: {:.2f}'.format(i + 1, running_reward))
-            running_reward = 0
-
-        if running_reward > 2500:
+        if running_reward > save_threshold:
             torch.save(model.state_dict(), 'policy{}.pth'.format(lr))
             print("Done! saved policy{}".format(lr))
             break
 
+        if i % print_freq == 0:
+            running_reward = running_reward / print_freq
+            print('Episode {}\tmean reward: {:.2f}'.format(i + 1, running_reward))
+            running_reward = 0
+
+
 if __name__ == '__main__':
-    train()
+    train(render=True, gamma=0.99, lr=0.02, betas=(0.9, 0.999), entropy_weight=0.01, max_episodes=1000, print_freq=10, save_threshold=2500)
