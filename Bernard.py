@@ -56,7 +56,7 @@ class ACModel(nn.Module):
         loss = 0
         for log_prob, value, reward in zip(self.log_probs, self.state_values, rewards):
             advantage = reward - value.item()
-            loss += (-log_prob * advantage) + F.smooth_l1_loss(value, reward)
+            loss += (-log_prob * advantage) + F.mse_loss(value, reward)
 
         # Add entropy term
         entropy = self.calculate_entropy(torch.stack(self.log_probs))
@@ -77,7 +77,7 @@ def train():
     betas = (0.9, 0.999)
 
     env = gym.make("LunarLander-v2", render_mode="human")
-    env.metadata['render_fps'] = 480
+    env.metadata['render_fps'] = 1024
 
     model = ACModel()
     optimizer = torch.optim.Adam(model.parameters(), lr=lr, betas=betas)
@@ -102,15 +102,16 @@ def train():
         optimizer.step()
         model.clear()
 
-        if running_reward > 2000:
-            torch.save(model.state_dict(), 'policy{}.pth'.format(lr))
-            print("Done, saved policy{}".format(lr))
 
         if i % 10 == 0:
             running_reward = running_reward / 10
             print('Episode {}\tmean reward: {:.2f}'.format(i + 1, running_reward))
             running_reward = 0
 
+        if running_reward > 2500:
+            torch.save(model.state_dict(), 'policy{}.pth'.format(lr))
+            print("Done! saved policy{}".format(lr))
+            break
 
 if __name__ == '__main__':
     train()
