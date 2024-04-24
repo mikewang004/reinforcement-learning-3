@@ -70,12 +70,7 @@ class ACModel(nn.Module):
         self.rewards.clear()
 
 
-def train():
-    render = False
-    gamma = 0.99
-    lr = 0.02
-    betas = (0.9, 0.999)
-
+def train(gamma=0.99, lr=0.02, betas=(0.9, 0.999), num_episodes=1000, max_steps=10000, print_interval=10):
     env = gym.make("LunarLander-v2", render_mode="human")
     env.metadata['render_fps'] = 480
 
@@ -83,16 +78,14 @@ def train():
     optimizer = torch.optim.Adam(model.parameters(), lr=lr, betas=betas)
 
     running_reward = 0
-    for i in range(1000):
+    for i in range(num_episodes):
         state, _ = env.reset()
         terminated = truncated = False
-        for t in range(10000):
+        for t in range(max_steps):
             action = model(state)
             state, reward, terminated, truncated, _ = env.step(action)
             model.rewards.append(reward)
             running_reward += reward
-            if render and i > 100:
-                env.render()
             if terminated or truncated:
                 break
 
@@ -105,12 +98,14 @@ def train():
         if running_reward > 2000:
             torch.save(model.state_dict(), 'policy{}.pth'.format(lr))
             print("Done, saved policy{}".format(lr))
+            break
 
-        if i % 10 == 0:
+        if i % print_interval == 0:
             running_reward = running_reward / 10
             print('Episode {}\tmean reward: {:.2f}'.format(i + 1, running_reward))
             running_reward = 0
 
 
 if __name__ == '__main__':
-    train()
+    train(gamma=0.99, lr=0.02, betas=(0.9, 0.999), num_episodes=1000, max_steps=10000, print_interval=10)
+
