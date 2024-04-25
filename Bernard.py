@@ -80,10 +80,30 @@ class ACModel(nn.Module):
         self.state_values.clear()
         self.rewards.clear()
 
+def reinforce(policy, optimizer, gamma):
+    R = 0
+    policy_loss = []
+    rewards = []
+    eps = np.finfo(np.float32).eps.item()
+    for r in policy.rewards[::-1]:
+        R = r + gamma * R
+        rewards.insert(0, R)
+    rewards = torch.tensor(rewards)
+    rewards = (rewards - rewards.mean()) / (rewards.std() + eps)
+    for log_prob, reward in zip(policy.log_probs, rewards):
+        policy_loss.append(-log_prob * reward)
+    optimizer.zero_grad()
+    policy_loss = torch.cat(policy_loss).sum()
+    policy_loss.backward()
+    optimizer.step()
+    del policy.rewards[:]
+    del policy.saved_log_probs[:]
+
 
 def train(render = False, gamma=0.99, lr=0.02, betas=(0.9, 0.999),
           entropy_weight=0.01, n_steps=5, num_episodes=1000,
-          max_steps=10000, print_interval=10):
+          max_steps=10000, print_interval=10, method = "sac"):
+    """Note method can either be 'sac' or 'reinforce'"""
     if render:
         env = gym.make("LunarLander-v2", render_mode="human")
         env.metadata['render_fps'] = 2048
@@ -104,12 +124,15 @@ def train(render = False, gamma=0.99, lr=0.02, betas=(0.9, 0.999),
             running_reward += reward
             if terminated or truncated:
                 break
+        if method == "sac":
+            optimizer.zero_grad()
+            loss = model.loss(gamma, entropy_weight=entropy_weight, n_steps=n_steps)
+            loss.backward()
+            optimizer.step()
+            model.clear()
+        elif method == "reinforce":
+            reinforce(model, optimizer, gamma)
 
-        optimizer.zero_grad()
-        loss = model.loss(gamma, entropy_weight=entropy_weight, n_steps=n_steps)
-        loss.backward()
-        optimizer.step()
-        model.clear()
 
         if running_reward > 2000:
             torch.save(model.state_dict(), 'policy{}.pth'.format(lr))
@@ -122,8 +145,8 @@ def train(render = False, gamma=0.99, lr=0.02, betas=(0.9, 0.999),
             running_reward = 0
 
 
-if __name__ == '__main__':
-    train(render = True,
+def main():
+    train(render = False,
           gamma=0.99,
           lr=0.01,
           betas=(0.9, 0.999),
@@ -131,4 +154,8 @@ if __name__ == '__main__':
           n_steps=10,
           num_episodes=1000,
           max_steps=10000,
-          print_interval=10)
+          print_interval=10,
+          method = "reinforce")
+
+if __name__ == '__main__':
+    main()
