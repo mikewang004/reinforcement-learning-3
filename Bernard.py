@@ -52,7 +52,7 @@ class ACModel(nn.Module):
         rewards = torch.tensor(rewards)
         rewards = (rewards - rewards.mean()) / rewards.std()
 
-        # Calculate loss
+        # Calculate loss using advantage
         loss = 0
         for log_prob, value, reward in zip(self.log_probs, self.state_values, rewards):
             advantage = reward - value.item()
@@ -70,9 +70,12 @@ class ACModel(nn.Module):
         self.rewards.clear()
 
 
-def train(gamma=0.99, lr=0.02, betas=(0.9, 0.999), num_episodes=1000, max_steps=10000, print_interval=10):
-    env = gym.make("LunarLander-v2", render_mode="human")
-    env.metadata['render_fps'] = 480
+def train(render = False, gamma=0.99, lr=0.02, betas=(0.9, 0.999), entropy_weight=0.01, num_episodes=1000, max_steps=10000, print_interval=10):
+    if render:
+        env = gym.make("LunarLander-v2", render_mode="human")
+        env.metadata['render_fps'] = 2048
+    else:
+        env = gym.make("LunarLander-v2")
 
     model = ACModel()
     optimizer = torch.optim.Adam(model.parameters(), lr=lr, betas=betas)
@@ -90,7 +93,7 @@ def train(gamma=0.99, lr=0.02, betas=(0.9, 0.999), num_episodes=1000, max_steps=
                 break
 
         optimizer.zero_grad()
-        loss = model.loss(gamma)
+        loss = model.loss(gamma, entropy_weight=0.01)
         loss.backward()
         optimizer.step()
         model.clear()
@@ -107,5 +110,12 @@ def train(gamma=0.99, lr=0.02, betas=(0.9, 0.999), num_episodes=1000, max_steps=
 
 
 if __name__ == '__main__':
-    train(gamma=0.99, lr=0.02, betas=(0.9, 0.999), num_episodes=1000, max_steps=10000, print_interval=10)
+    train(render = True,
+          gamma=0.99,
+          lr=0.02,
+          betas=(0.9, 0.999),
+          entropy_weight=0.01,
+          num_episodes=1000,
+          max_steps=10000,
+          print_interval=10)
 
