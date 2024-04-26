@@ -48,14 +48,18 @@ class ACModel(nn.Module):
             n_step_returns.insert(0, n_step_return)  # Prepend to the beginning
         return n_step_returns
 
-    def loss(self, gamma=0.99, entropy_weight=0.01, n_steps=5):
+    def loss(self, gamma=0.99, entropy_weight=0.01, n_steps=5, use_baseline=False):
         n_step_returns = self.calculate_n_step_returns(n=n_steps, gamma=gamma)
         n_step_returns = torch.tensor(n_step_returns)
 
         # Calculate loss using advantage
         loss = 0
         for log_prob, value, n_step_return in zip(self.log_probs, self.state_values, n_step_returns):
-            advantage = n_step_return - value.item()
+            print(use_baseline)
+            if use_baseline:
+                advantage = n_step_return - value.item()
+            else:
+                advantage = n_step_return
             loss += (-log_prob * advantage) + F.smooth_l1_loss(value, n_step_return)
 
         # Add entropy term
@@ -92,7 +96,7 @@ def reinforce(policy, optimizer, gamma):
 
 def train(render = False, gamma=0.99, lr=0.02, betas=(0.9, 0.999),
           entropy_weight=0.01, n_steps=5, num_episodes=1000,
-          max_steps=10000, print_interval=10, method = "sac"):
+          max_steps=10000, print_interval=10, method = "a2c", use_baseline = True):
     """Note method can either be 'sac' or 'reinforce'"""
     if render:
         env = gym.make("LunarLander-v2", render_mode="human")
@@ -114,9 +118,9 @@ def train(render = False, gamma=0.99, lr=0.02, betas=(0.9, 0.999),
             running_reward += reward
             if terminated or truncated:
                 break
-        if method == "sac":
+        if method == "a2c":
             optimizer.zero_grad()
-            loss = model.loss(gamma, entropy_weight=entropy_weight, n_steps=n_steps)
+            loss = model.loss(gamma, entropy_weight=entropy_weight, n_steps=n_steps, use_baseline=use_baseline)
             loss.backward()
             optimizer.step()
             model.clear()
@@ -145,7 +149,8 @@ def main():
           num_episodes=1000,
           max_steps=10000,
           print_interval=10,
-          method = "reinforce")
+          method = "a2c",
+          use_baseline = False)
 
 if __name__ == '__main__':
     main()
