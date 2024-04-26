@@ -148,7 +148,7 @@ def train(render = False, gamma=0.99, lr=0.02, betas=(0.9, 0.999),
 
 
 def main():
-    train(render = False,
+    train(render = True,
           gamma=0.99,
           lr=0.01,
           betas=(0.9, 0.999),
