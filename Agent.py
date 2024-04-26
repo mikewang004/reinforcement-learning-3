@@ -13,10 +13,10 @@ class ACModel(nn.Module):
         self.actor_common = nn.Linear(8, 128)
 
         self.actor_action = nn.Linear(128, 4)
-        self.critic_value = nn.Linear(128, 1)
+        #self.critic_value = nn.Linear(128, 1)
 
         self.log_probs = []
-        self.state_values = []
+        #self.state_values = []
         self.rewards = []
 
     def forward(self, state):
@@ -24,14 +24,14 @@ class ACModel(nn.Module):
         state = torch.from_numpy(state).float()
         state = F.relu(self.actor_common(state))
 
-        state_value = self.critic_value(state)
+        #state_value = self.critic_value(state)
 
         action_probs = F.softmax(self.actor_action(state), dim=-1)
         action_distribution = Categorical(action_probs)
         action = action_distribution.sample()
 
         self.log_probs.append(action_distribution.log_prob(action))
-        self.state_values.append(state_value)
+        #self.state_values.append(state_value)
 
         return action.item()
 
@@ -115,7 +115,8 @@ def train(render = False, gamma=0.99, lr=0.02, betas=(0.9, 0.999),
     optimizer = optim.Adam(model.parameters(), lr=lr, betas=betas)
 
     running_reward = 0
-    for i in range(num_episodes):
+    export_reward = np.zeros(int(num_episodes/print_interval))
+    for i in range(0, num_episodes):
         state, _ = env.reset()
         terminated = truncated = False
         for t in range(max_steps):
@@ -143,7 +144,10 @@ def train(render = False, gamma=0.99, lr=0.02, betas=(0.9, 0.999),
         if i % print_interval == 0:
             running_reward = running_reward / print_interval
             print('Episode {}\tmean reward: {:.2f}'.format(i + 1, running_reward))
+            export_reward[int(i / print_interval)] = running_reward
             running_reward = 0
+    return export_reward
+    
 
 
 def main():
