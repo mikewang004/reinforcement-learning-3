@@ -49,17 +49,6 @@ class ACModel(nn.Module):
         return n_step_returns
 
     def loss(self, gamma=0.99, entropy_weight=0.01, n_steps=5):
-        '''
-        # Calculate discounted rewards
-        rewards = []
-        discounted_reward = 0
-        for reward in self.rewards[::-1]:
-            discounted_reward = reward + gamma * discounted_reward
-            rewards.insert(0, discounted_reward)
-
-        rewards = torch.tensor(rewards)
-        rewards = (rewards - rewards.mean()) / rewards.std()
-        '''
         n_step_returns = self.calculate_n_step_returns(n=n_steps, gamma=gamma)
         n_step_returns = torch.tensor(n_step_returns)
 
