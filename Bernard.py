@@ -164,7 +164,7 @@ def train(render=False, gamma=0.99, lr=0.02, betas=(0.9, 0.999),
 
 def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print(device)
+    print("Using device: ", device)
     rewards = train(render=True,
               gamma=0.999,
               lr=0.01,
