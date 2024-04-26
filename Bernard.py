@@ -80,6 +80,8 @@ class ACModel(nn.Module):
         self.state_values.clear()
         self.rewards.clear()
 
+
+
 def reinforce(policy, optimizer, gamma):
     R = 0
     policy_loss = []
@@ -93,11 +95,11 @@ def reinforce(policy, optimizer, gamma):
     for log_prob, reward in zip(policy.log_probs, rewards):
         policy_loss.append(-log_prob * reward)
     optimizer.zero_grad()
-    policy_loss = torch.cat(policy_loss).sum()
+    policy_loss = torch.stack(policy_loss).sum()
     policy_loss.backward()
     optimizer.step()
     del policy.rewards[:]
-    del policy.saved_log_probs[:]
+    del policy.log_probs[:]
 
 
 def train(render = False, gamma=0.99, lr=0.02, betas=(0.9, 0.999),
@@ -111,7 +113,7 @@ def train(render = False, gamma=0.99, lr=0.02, betas=(0.9, 0.999),
         env = gym.make("LunarLander-v2")
 
     model = ACModel()
-    optimizer = torch.optim.Adam(model.parameters(), lr=lr, betas=betas)
+    optimizer = optim.Adam(model.parameters(), lr=lr, betas=betas)
 
     running_reward = 0
     for i in range(num_episodes):
