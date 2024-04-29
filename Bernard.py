@@ -110,15 +110,14 @@ def train(render = False, gamma=0.99, lr=0.02, betas=(0.9, 0.999),
     model = ACModel()
     optimizer = optim.Adam(model.parameters(), lr=lr, betas=betas)
 
-    running_reward = 0
     for i in range(num_episodes):
         state, _ = env.reset()
         terminated = truncated = False
+        running_reward = 0
         for t in range(max_steps):
             action = model(state)
             state, reward, terminated, truncated, _ = env.step(action)
             model.rewards.append(reward)
-            model.rewards_log.append(reward)
             running_reward += reward
             if terminated or truncated:
                 break
@@ -127,15 +126,13 @@ def train(render = False, gamma=0.99, lr=0.02, betas=(0.9, 0.999),
             loss = model.loss(gamma, entropy_weight=entropy_weight, n_steps=n_steps, use_baseline=use_baseline)
             loss.backward()
             optimizer.step()
+            model.rewards_log.append(running_reward)
             model.clear()
         elif method == "reinforce":
             reinforce(model, optimizer, gamma)
 
-
         if i % print_interval == 0:
-            running_reward = running_reward / print_interval
-            print('Episode {}\tmean reward: {:.2f}'.format(i + 1, running_reward))
-            running_reward = 0
+            print('Episode {}\t reward: {:.2f}'.format(i + 1, running_reward))
 
     # Save rewards data
     with open(os.path.join('Data/rewards', 'Rewards_gamma={}_lr={}_betas={}_entropy={}_nsteps={}_numepisodes={}_methods={}_usebaseline={}_{}.csv'
@@ -158,7 +155,7 @@ def main():
           betas=(0.9, 0.999),
           entropy_weight=0.01,
           n_steps=10,
-          num_episodes=500,
+          num_episodes=10,
           max_steps=10000,
           print_interval=10,
           method = "a2c",

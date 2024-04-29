@@ -2,7 +2,7 @@ from Bernard import train
 from matplotlib import pyplot as plt
 import os
 
-n_steps = [1, 5, 20, 50, 100]
+n_steps = [2, 5, 20, 50, 100]
 rewards = []
 
 for n_steps in n_steps:
