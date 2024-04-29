@@ -136,18 +136,15 @@ def train(render = False, gamma=0.99, lr=0.02, betas=(0.9, 0.999),
             print('Episode {}\tmean reward: {:.2f}'.format(i + 1, running_reward))
             running_reward = 0
 
-    # Define filenames with folder path
-    rewards_filename = os.path.join('Data', 'Rewards_gamma={}_lr={}_betas={}_entropy={}_nsteps={}_methods={}_usebaseline={}.csv'
-                                    .format(gamma, lr, betas, entropy_weight, n_steps, method, use_baseline))
-    model_filename = os.path.join('Data',  'Model_gamma={}_lr={}_betas={}_entropy={}_nsteps={}_methods={}_usebaseline={}.csv'
-                                    .format(gamma, lr, betas, entropy_weight, n_steps, method, use_baseline))
     # Save rewards data
-    with open(rewards_filename, 'w') as file:
+    with open(os.path.join('Data/rewards', 'Rewards_gamma={}_lr={}_betas={}_entropy={}_nsteps={}_methods={}_usebaseline={}.csv'
+                                    .format(gamma, lr, betas, entropy_weight, n_steps, method, use_baseline)), 'w') as file:
         for reward in model.rewards_log:
             file.write(str(reward) + '\n')
 
-    # Save model state dictionary (modify extension to '.pth' for PyTorch)
-    torch.save(model.state_dict(), model_filename)
+    # Save model data
+    torch.save(model.state_dict(), os.path.join('Data/models',  'Model_gamma={}_lr={}_betas={}_entropy={}_nsteps={}_methods={}_usebaseline={}.csv'
+                                    .format(gamma, lr, betas, entropy_weight, n_steps, method, use_baseline)))
 
     print('Done! Saved data to "{}" folder.'.format('Data'))
 
