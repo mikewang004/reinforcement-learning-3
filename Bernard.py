@@ -139,13 +139,13 @@ def train(render = False, gamma=0.99, lr=0.02, betas=(0.9, 0.999),
 
     # Save rewards data
     with open(os.path.join('Data/rewards', 'Rewards_gamma={}_lr={}_betas={}_entropy={}_nsteps={}_numepisodes={}_methods={}_usebaseline={}_{}.csv'
-                                    .format(gamma, lr, betas, entropy_weight, n_steps, num_episodes, method, use_baseline, datetime.datetime.now().strftime("%d-%m_%H:%M"))), 'w') as file:
+                                    .format(gamma, lr, betas, entropy_weight, n_steps, num_episodes, method, use_baseline, datetime.datetime.now().strftime("%d-%m_%H_%M"))), 'w') as file:
         for reward in model.rewards_log:
             file.write(str(reward) + '\n')
 
     # Save model data
     torch.save(model.state_dict(), os.path.join('Data/models',  'Model_gamma={}_lr={}_betas={}_entropy={}_nsteps={}_numepisodes={}_methods={}_usebaseline={}_{}.csv'
-                                    .format(gamma, lr, betas, entropy_weight, n_steps, num_episodes, method, use_baseline, datetime.datetime.now().strftime("%d-%m_%H:%M"))))
+                                    .format(gamma, lr, betas, entropy_weight, n_steps, num_episodes, method, use_baseline, datetime.datetime.now().strftime("%d-%m_%H_%M"))))
 
     print('Done! Saved data to "{}" folder.'.format('Data'))
     return(model.rewards_log)

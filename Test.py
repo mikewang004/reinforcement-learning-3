@@ -1,12 +1,11 @@
 from Bernard import train
 import datetime
 
-print(datetime.datetime.now().strftime("%d-%m_%H:%M"))
-'''
+n_steps = [1, 5, 20, 50, 100]
 rewards = []
 
-for n_steps in (1, 10, 100, 1000, 10000):
-    train(render=True,
+for n_steps in n_steps:
+    rewards.append(train(render=True,
       gamma=0.99,
       lr=0.01,
       betas=(0.9, 0.999),
@@ -16,5 +15,5 @@ for n_steps in (1, 10, 100, 1000, 10000):
       max_steps=10000,
       print_interval=n_steps,
       method="a2c",
-      use_baseline=False)
-'''
+      use_baseline=False))
+
