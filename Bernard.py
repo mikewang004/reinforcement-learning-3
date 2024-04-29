@@ -5,6 +5,7 @@ import torch.nn.functional as F
 import gymnasium as gym
 from torch.distributions import Categorical
 import numpy as np
+import os
 
 
 class ACModel(nn.Module):
@@ -56,7 +57,6 @@ class ACModel(nn.Module):
         # Calculate loss using advantage
         loss = 0
         for log_prob, value, n_step_return in zip(self.log_probs, self.state_values, n_step_returns):
-            print(use_baseline)
             if use_baseline:
                 advantage = n_step_return - value.item()
             else:
@@ -136,15 +136,20 @@ def train(render = False, gamma=0.99, lr=0.02, betas=(0.9, 0.999),
             print('Episode {}\tmean reward: {:.2f}'.format(i + 1, running_reward))
             running_reward = 0
 
-    with open('Rewards_gamma={}_lr={}_betas={}_entropy={}_nsteps={}.csv'
-                      .format(gamma, lr, betas, entropy_weight, n_steps),'w') as file:
+    # Define filenames with folder path
+    rewards_filename = os.path.join('Data', 'Rewards_gamma={}_lr={}_betas={}_entropy={}_nsteps={}_methods={}_usebaseline={}.csv'
+                                    .format(gamma, lr, betas, entropy_weight, n_steps, method, use_baseline))
+    model_filename = os.path.join('Data',  'Model_gamma={}_lr={}_betas={}_entropy={}_nsteps={}_methods={}_usebaseline={}.csv'
+                                    .format(gamma, lr, betas, entropy_weight, n_steps, method, use_baseline))
+    # Save rewards data
+    with open(rewards_filename, 'w') as file:
         for reward in model.rewards_log:
             file.write(str(reward) + '\n')
 
-    torch.save(model.state_dict(), 'Model_gamma={}_lr={}_betas={}_entropy={}_nsteps={}.csv'
-                      .format(gamma, lr, betas, entropy_weight, n_steps))
-    print('Done! Saved using gamma={}_lr={}_betas={}_entropy={}_nsteps={}.csv'
-                      .format(gamma, lr, betas, entropy_weight, n_steps))
+    # Save model state dictionary (modify extension to '.pth' for PyTorch)
+    torch.save(model.state_dict(), model_filename)
+
+    print('Done! Saved data to "{}" folder.'.format('Data'))
 
 
 def main():
