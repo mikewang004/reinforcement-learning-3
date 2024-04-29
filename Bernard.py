@@ -6,6 +6,7 @@ import gymnasium as gym
 from torch.distributions import Categorical
 import numpy as np
 import os
+import datetime
 
 
 class ACModel(nn.Module):
@@ -137,14 +138,14 @@ def train(render = False, gamma=0.99, lr=0.02, betas=(0.9, 0.999),
             running_reward = 0
 
     # Save rewards data
-    with open(os.path.join('Data/rewards', 'Rewards_gamma={}_lr={}_betas={}_entropy={}_nsteps={}_methods={}_usebaseline={}.csv'
-                                    .format(gamma, lr, betas, entropy_weight, n_steps, method, use_baseline)), 'w') as file:
+    with open(os.path.join('Data/rewards', 'Rewards_gamma={}_lr={}_betas={}_entropy={}_nsteps={}_numepisodes={}_methods={}_usebaseline={}_{}.csv'
+                                    .format(gamma, lr, betas, entropy_weight, n_steps, num_episodes, method, use_baseline, datetime.now())), 'w') as file:
         for reward in model.rewards_log:
             file.write(str(reward) + '\n')
 
     # Save model data
-    torch.save(model.state_dict(), os.path.join('Data/models',  'Model_gamma={}_lr={}_betas={}_entropy={}_nsteps={}_methods={}_usebaseline={}.csv'
-                                    .format(gamma, lr, betas, entropy_weight, n_steps, method, use_baseline)))
+    torch.save(model.state_dict(), os.path.join('Data/models',  'Model_gamma={}_lr={}_betas={}_entropy={}_nsteps={}_numepisodes={}_methods={}_usebaseline={}_{}.csv'
+                                    .format(gamma, lr, betas, entropy_weight, n_steps, num_episodes, method, use_baseline, datetime.now())))
 
     print('Done! Saved data to "{}" folder.'.format('Data'))
 
@@ -156,7 +157,7 @@ def main():
           betas=(0.9, 0.999),
           entropy_weight=0.01,
           n_steps=10,
-          num_episodes=10,
+          num_episodes=500,
           max_steps=10000,
           print_interval=10,
           method = "a2c",
