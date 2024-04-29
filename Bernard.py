@@ -7,6 +7,7 @@ from torch.distributions import Categorical
 import numpy as np
 import os
 import datetime
+from matplotlib import pyplot as plt
 
 
 class ACModel(nn.Module):
@@ -45,11 +46,19 @@ class ACModel(nn.Module):
 
     def calculate_n_step_returns(self, n=5, gamma=0.99):
         n_step_returns = []
-        rewards = (self.rewards - np.mean(self.rewards)) / (np.std(self.rewards))
+        rewards = self.rewards  # Optional: Use rewards without normalization
+
         for i in reversed(range(len(rewards) - n + 1)):
-            n_step_return = sum([rewards[i + j] * (gamma ** j) for j in range(n)])
+            if i + n <= len(rewards) - 1:
+                n_step_return = sum([rewards[i + j] * (gamma ** j) for j in range(n)])
+            else:
+                # Access last reward explicitly for terminal state
+                n_step_return = rewards[-1] * (gamma ** (n - 1))
+
             n_step_returns.insert(0, n_step_return)  # Prepend to the beginning
         return n_step_returns
+
+
 
     def loss(self, gamma=0.99, entropy_weight=0.01, n_steps=5, use_baseline=False):
         n_step_returns = self.calculate_n_step_returns(n=n_steps, gamma=gamma)
@@ -97,10 +106,10 @@ def reinforce(policy, optimizer, gamma):
     del policy.log_probs[:]
 
 
-def train(render = False, gamma=0.99, lr=0.02, betas=(0.9, 0.999),
+def train(render=False, gamma=0.99, lr=0.02, betas=(0.9, 0.999),
           entropy_weight=0.01, n_steps=5, num_episodes=1000,
-          max_steps=10000, print_interval=10, method = "a2c", use_baseline = True):
-    """Note method can either be 'sac' or 'reinforce'"""
+          max_steps=10000, print_interval=10, method="a2c", use_baseline=True,
+          update_frequency=5):  # Update frequency: Perform optimization step every X steps
     if render:
         env = gym.make("LunarLander-v2", render_mode="human")
         env.metadata['render_fps'] = 2048
@@ -110,26 +119,29 @@ def train(render = False, gamma=0.99, lr=0.02, betas=(0.9, 0.999),
     model = ACModel()
     optimizer = optim.Adam(model.parameters(), lr=lr, betas=betas)
 
+    running_reward = 0
     for i in range(num_episodes):
         state, _ = env.reset()
         terminated = truncated = False
-        running_reward = 0
+        episode_rewards = []
         for t in range(max_steps):
             action = model(state)
             state, reward, terminated, truncated, _ = env.step(action)
             model.rewards.append(reward)
+            episode_rewards.append(reward)
             running_reward += reward
+
+            if t % update_frequency == 0 or terminated or truncated:  # Perform optimization step every X steps
+                optimizer.zero_grad()
+                loss = model.loss(gamma, entropy_weight=entropy_weight, n_steps=n_steps, use_baseline=use_baseline)
+                loss.backward()
+                optimizer.step()
+                model.clear()
+
             if terminated or truncated:
                 break
-        if method == "a2c":
-            optimizer.zero_grad()
-            loss = model.loss(gamma, entropy_weight=entropy_weight, n_steps=n_steps, use_baseline=use_baseline)
-            loss.backward()
-            optimizer.step()
-            model.rewards_log.append(running_reward)
-            model.clear()
-        elif method == "reinforce":
-            reinforce(model, optimizer, gamma)
+
+        model.rewards_log.append(sum(episode_rewards))
 
         if i % print_interval == 0:
             print('Episode {}\t mean reward: {:.2f}'.format(i + 1, np.mean(model.rewards_log[-print_interval:])))
@@ -145,21 +157,22 @@ def train(render = False, gamma=0.99, lr=0.02, betas=(0.9, 0.999),
                                     .format(gamma, lr, betas, entropy_weight, n_steps, num_episodes, method, use_baseline, datetime.datetime.now().strftime("%d-%m_%H_%M"))))
 
     print('Done! Saved data to "{}" folder.'.format('Data'))
-    return(model.rewards_log)
+    return model.rewards_log
 
 
 def main():
     train(render = True,
           gamma=0.99,
-          lr=0.01,
-          betas=(0.9, 0.999),
+          lr=0.05,
+          betas=(0.99, 0.999),
           entropy_weight=0.01,
           n_steps=1,
-          num_episodes=500,
+          num_episodes=1000,
           max_steps=10000,
           print_interval=10,
           method = "a2c",
-          use_baseline = True)
+          use_baseline = False,
+          update_frequency=10)
 
 if __name__ == '__main__':
     main()
