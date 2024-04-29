@@ -132,7 +132,7 @@ def train(render = False, gamma=0.99, lr=0.02, betas=(0.9, 0.999),
             reinforce(model, optimizer, gamma)
 
         if i % print_interval == 0:
-            print('Episode {}\t reward: {:.2f}'.format(i + 1, running_reward))
+            print('Episode {}\t mean reward: {:.2f}'.format(i + 1, np.mean(model.rewards_log[-print_interval:])))
 
     # Save rewards data
     with open(os.path.join('Data/rewards', 'Rewards_gamma={}_lr={}_betas={}_entropy={}_nsteps={}_numepisodes={}_methods={}_usebaseline={}_{}.csv'
@@ -154,12 +154,12 @@ def main():
           lr=0.01,
           betas=(0.9, 0.999),
           entropy_weight=0.01,
-          n_steps=10,
-          num_episodes=10,
+          n_steps=1,
+          num_episodes=500,
           max_steps=10000,
           print_interval=10,
           method = "a2c",
-          use_baseline = False)
+          use_baseline = True)
 
 if __name__ == '__main__':
     main()
