@@ -18,6 +18,7 @@ class ACModel(nn.Module):
         self.log_probs = []
         self.state_values = []
         self.rewards = []
+        self.rewards_log = []
 
     def forward(self, state):
 
@@ -116,6 +117,7 @@ def train(render = False, gamma=0.99, lr=0.02, betas=(0.9, 0.999),
             action = model(state)
             state, reward, terminated, truncated, _ = env.step(action)
             model.rewards.append(reward)
+            model.rewards_log.append(reward)
             running_reward += reward
             if terminated or truncated:
                 break
@@ -129,15 +131,20 @@ def train(render = False, gamma=0.99, lr=0.02, betas=(0.9, 0.999),
             reinforce(model, optimizer, gamma)
 
 
-        if running_reward > 2000:
-            torch.save(model.state_dict(), 'policy{}.pth'.format(lr))
-            print("Done, saved policy{}".format(lr))
-            break
-
         if i % print_interval == 0:
             running_reward = running_reward / print_interval
             print('Episode {}\tmean reward: {:.2f}'.format(i + 1, running_reward))
             running_reward = 0
+
+    with open('Rewards_gamma={}_lr={}_betas={}_entropy={}_nsteps={}.csv'
+                      .format(gamma, lr, betas, entropy_weight, n_steps),'w') as file:
+        for reward in model.rewards_log:
+            file.write(str(reward) + '\n')
+
+    torch.save(model.state_dict(), 'Model_gamma={}_lr={}_betas={}_entropy={}_nsteps={}.csv'
+                      .format(gamma, lr, betas, entropy_weight, n_steps))
+    print('Done! Saved using gamma={}_lr={}_betas={}_entropy={}_nsteps={}.csv'
+                      .format(gamma, lr, betas, entropy_weight, n_steps))
 
 
 def main():
@@ -147,7 +154,7 @@ def main():
           betas=(0.9, 0.999),
           entropy_weight=0.01,
           n_steps=10,
-          num_episodes=1000,
+          num_episodes=10,
           max_steps=10000,
           print_interval=10,
           method = "a2c",
