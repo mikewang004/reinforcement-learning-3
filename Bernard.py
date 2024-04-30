@@ -163,9 +163,9 @@ def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(device)
     train(render=True,
-          gamma=0.999,
-          lr=0.01,
-          betas=(0.99, 0.999),
+          gamma=0.99,
+          lr=0.02,
+          betas=(0.9, 0.999),
           entropy_weight=0.01,
           num_episodes=500,
           max_steps=10000,
