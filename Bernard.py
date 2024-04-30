@@ -27,10 +27,9 @@ class ACModel(nn.Module):
 
         state = torch.from_numpy(state).float()
         state = F.relu(self.actor_common(state))
-
         state_value = self.critic_value(state)
 
-        action_probs = F.softmax(self.actor_action(state), dim=-1)
+        action_probs = F.softmax(self.actor_action(state))
         action_distribution = Categorical(action_probs)
         action = action_distribution.sample()
 
@@ -44,38 +43,33 @@ class ACModel(nn.Module):
         entropy = dist.entropy().mean()
         return entropy
 
-    def calculate_n_step_returns(self, n=5, gamma=0.99):
-        n_step_returns = []
-        rewards = self.rewards  # Optional: Use rewards without normalization
 
-        for i in reversed(range(len(rewards) - n + 1)):
-            if i + n <= len(rewards) - 1:
-                n_step_return = sum([rewards[i + j] * (gamma ** j) for j in range(n)])
-            else:
-                # Access last reward explicitly for terminal state
-                n_step_return = rewards[-1] * (gamma ** (n - 1))
+    def loss(self, gamma=0.99, entropy_weight=0.01, use_baseline=False):
+        #discount the rewards
+        rewards = []
+        discounted_reward = 0
+        for reward in self.rewards[::-1]:
+            discounted_reward = reward + gamma * discounted_reward
+            rewards.insert(0, discounted_reward)
 
-            n_step_returns.insert(0, n_step_return)  # Prepend to the beginning
-        return n_step_returns
+        rewards = np.array(rewards)
+        # Normalize rewards
+        rewards = (rewards - np.mean(rewards)) / (np.std(rewards) + 1e-7)
+        rewards = torch.tensor(rewards)
 
-
-
-    def loss(self, gamma=0.99, entropy_weight=0.01, n_steps=5, use_baseline=False):
-        n_step_returns = self.calculate_n_step_returns(n=n_steps, gamma=gamma)
-        n_step_returns = torch.tensor(n_step_returns)
 
         # Calculate loss using advantage
         loss = 0
-        for log_prob, value, n_step_return in zip(self.log_probs, self.state_values, n_step_returns):
+        for log_prob, value, reward in zip(self.log_probs, self.state_values, rewards):
             if use_baseline:
-                advantage = n_step_return - value.item()
+                advantage = reward - value.item()
             else:
-                advantage = n_step_return
-            loss += (-log_prob * advantage) + F.smooth_l1_loss(value, n_step_return)
+                advantage = reward
+            loss += (-log_prob * advantage) + F.smooth_l1_loss(value, reward)
 
         # Add entropy term
         entropy = self.calculate_entropy(torch.stack(self.log_probs))
-        loss -= entropy_weight * entropy
+        loss = loss - (entropy_weight * entropy)
 
         return loss
 
@@ -133,7 +127,7 @@ def train(render=False, gamma=0.99, lr=0.02, betas=(0.9, 0.999),
 
             if t % update_frequency == 0 or terminated or truncated:  # Perform optimization step every X steps
                 optimizer.zero_grad()
-                loss = model.loss(gamma, entropy_weight=entropy_weight, n_steps=n_steps, use_baseline=use_baseline)
+                loss = model.loss(gamma, entropy_weight=entropy_weight, use_baseline=use_baseline)
                 loss.backward()
                 optimizer.step()
                 model.clear()
@@ -146,12 +140,17 @@ def train(render=False, gamma=0.99, lr=0.02, betas=(0.9, 0.999),
         if i % print_interval == 0:
             print('Episode {}\t mean reward: {:.2f}'.format(i + 1, np.mean(model.rewards_log[-print_interval:])))
 
-    # Save rewards data
+    # Save data
+    directories = ['Data/rewards', 'Data/models']
+    for directory in directories:
+      if not os.path.exists(directory):
+        os.makedirs(directory)
+        print(f"Directory '{directory}' created successfully.")
+
     with open(os.path.join('Data/rewards', 'Rewards_gamma={}_lr={}_betas={}_entropy={}_nsteps={}_numepisodes={}_methods={}_usebaseline={}_{}.csv'
                                     .format(gamma, lr, betas, entropy_weight, n_steps, num_episodes, method, use_baseline, datetime.datetime.now().strftime("%d-%m_%H_%M"))), 'w') as file:
         for reward in model.rewards_log:
             file.write(str(reward) + '\n')
-
     # Save model data
     torch.save(model.state_dict(), os.path.join('Data/models',  'Model_gamma={}_lr={}_betas={}_entropy={}_nsteps={}_numepisodes={}_methods={}_usebaseline={}_{}.csv'
                                     .format(gamma, lr, betas, entropy_weight, n_steps, num_episodes, method, use_baseline, datetime.datetime.now().strftime("%d-%m_%H_%M"))))
@@ -161,18 +160,19 @@ def train(render=False, gamma=0.99, lr=0.02, betas=(0.9, 0.999),
 
 
 def main():
-    train(render = True,
-          gamma=0.99,
-          lr=0.05,
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print(device)
+    train(render=True,
+          gamma=0.999,
+          lr=0.01,
           betas=(0.99, 0.999),
           entropy_weight=0.01,
-          n_steps=1,
-          num_episodes=1000,
+          num_episodes=500,
           max_steps=10000,
           print_interval=10,
-          method = "a2c",
-          use_baseline = False,
-          update_frequency=10)
+          method="a2c",
+          use_baseline=True,
+          update_frequency=100)
 
 if __name__ == '__main__':
     main()
