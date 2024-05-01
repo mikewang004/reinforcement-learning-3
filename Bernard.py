@@ -8,6 +8,7 @@ import numpy as np
 import os
 import datetime
 from matplotlib import pyplot as plt
+from scipy.signal import savgol_filter
 
 
 class ACModel(nn.Module):
@@ -135,10 +136,12 @@ def train(render=False, gamma=0.99, lr=0.02, betas=(0.9, 0.999),
             if terminated or truncated:
                 break
 
-        model.rewards_log.append(sum(episode_rewards))
-
         if i % print_interval == 0:
             print('Episode {}\t mean reward: {:.2f}'.format(i + 1, np.mean(model.rewards_log[-print_interval:])))
+
+        model.rewards_log.append(sum(episode_rewards))
+
+
 
     # Save data
     directories = ['Data/rewards', 'Data/models']
@@ -162,17 +165,19 @@ def train(render=False, gamma=0.99, lr=0.02, betas=(0.9, 0.999),
 def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(device)
-    train(render=True,
-          gamma=0.99,
-          lr=0.01,
-          betas=(0.9, 0.999),
-          entropy_weight=0.1,
-          num_episodes=500,
-          max_steps=10000,
-          print_interval=10,
-          method="a2c",
-          use_baseline=True,
-          update_frequency=100)
+    rewards = train(render=True,
+              gamma=0.999,
+              lr=0.01,
+              betas=(0.9, 0.999),
+              entropy_weight=0.1,
+              num_episodes=500,
+              max_steps=10000,
+              print_interval=10,
+              method="a2c",
+              use_baseline=True,
+              update_frequency=200)
+
+    plt.plot(savgol_filter(rewards, 25, 3))
 
 if __name__ == '__main__':
     main()

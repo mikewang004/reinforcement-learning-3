@@ -11,7 +11,7 @@ with open('Data/rewards/Rewards_gamma=0.99_lr=0.01_betas=(0.9, 0.999)_entropy=0.
         x.append(float(row[0]))  # assuming first column is x
 
 
-plt.plot(savgol_filter(x, 50, 3))
+plt.plot(savgol_filter(x, 25, 3))
 plt.xlabel('X-axis label')
 plt.ylabel('Y-axis label')
 plt.title('Your Title Here')
