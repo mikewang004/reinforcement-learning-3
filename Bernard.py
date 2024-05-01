@@ -164,9 +164,9 @@ def main():
     print(device)
     train(render=True,
           gamma=0.99,
-          lr=0.02,
+          lr=0.01,
           betas=(0.9, 0.999),
-          entropy_weight=0.01,
+          entropy_weight=0.1,
           num_episodes=500,
           max_steps=10000,
           print_interval=10,
