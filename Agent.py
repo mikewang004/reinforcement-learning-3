@@ -5,10 +5,6 @@ import torch.nn.functional as F
 import gymnasium as gym
 from torch.distributions import Categorical
 import numpy as np
-import os
-import datetime
-from matplotlib import pyplot as plt
-from scipy.signal import savgol_filter
 
 
 class ACModel(nn.Module):
@@ -17,25 +13,25 @@ class ACModel(nn.Module):
         self.actor_common = nn.Linear(8, 128)
 
         self.actor_action = nn.Linear(128, 4)
-        self.critic_value = nn.Linear(128, 1)
+        #self.critic_value = nn.Linear(128, 1)
 
         self.log_probs = []
-        self.state_values = []
+        #self.state_values = []
         self.rewards = []
-        self.rewards_log = []
 
     def forward(self, state):
 
         state = torch.from_numpy(state).float()
         state = F.relu(self.actor_common(state))
-        state_value = self.critic_value(state)
 
-        action_probs = F.softmax(self.actor_action(state))
+        #state_value = self.critic_value(state)
+
+        action_probs = F.softmax(self.actor_action(state), dim=-1)
         action_distribution = Categorical(action_probs)
         action = action_distribution.sample()
 
         self.log_probs.append(action_distribution.log_prob(action))
-        self.state_values.append(state_value)
+        #self.state_values.append(state_value)
 
         return action.item()
 
@@ -52,23 +48,30 @@ class ACModel(nn.Module):
             n_step_returns.insert(0, n_step_return)  # Prepend to the beginning
         return n_step_returns
 
-    def loss(self, gamma=0.99, entropy_weight=0.01, n_steps=5, use_baseline=False):
+    def loss(self, gamma=0.99, entropy_weight=0.01, n_steps=5):
+        '''
+        # Calculate discounted rewards
+        rewards = []
+        discounted_reward = 0
+        for reward in self.rewards[::-1]:
+            discounted_reward = reward + gamma * discounted_reward
+            rewards.insert(0, discounted_reward)
+
+        rewards = torch.tensor(rewards)
+        rewards = (rewards - rewards.mean()) / rewards.std()
+        '''
         n_step_returns = self.calculate_n_step_returns(n=n_steps, gamma=gamma)
         n_step_returns = torch.tensor(n_step_returns)
 
         # Calculate loss using advantage
         loss = 0
         for log_prob, value, n_step_return in zip(self.log_probs, self.state_values, n_step_returns):
-            print(use_baseline)
-            if use_baseline:
-                advantage = n_step_return - value.item()
-            else:
-                advantage = n_step_return
+            advantage = n_step_return - value.item()
             loss += (-log_prob * advantage) + F.smooth_l1_loss(value, n_step_return)
 
         # Add entropy term
         entropy = self.calculate_entropy(torch.stack(self.log_probs))
-        loss = loss - (entropy_weight * entropy)
+        loss -= entropy_weight * entropy
 
         return loss
 
@@ -98,9 +101,9 @@ def reinforce(policy, optimizer, gamma):
     del policy.log_probs[:]
 
 
-def train(render=False, gamma=0.99, lr=0.02, betas=(0.9, 0.999),
+def train(render = False, gamma=0.99, lr=0.02, betas=(0.9, 0.999),
           entropy_weight=0.01, n_steps=5, num_episodes=1000,
-          max_steps=10000, print_interval=10, method = "a2c", use_baseline = True):
+          max_steps=10000, print_interval=10, method = "sac"):
     """Note method can either be 'sac' or 'reinforce'"""
     if render:
         env = gym.make("LunarLander-v2", render_mode="human")
@@ -112,29 +115,20 @@ def train(render=False, gamma=0.99, lr=0.02, betas=(0.9, 0.999),
     optimizer = optim.Adam(model.parameters(), lr=lr, betas=betas)
 
     running_reward = 0
-    for i in range(num_episodes):
+    export_reward = np.zeros(int(num_episodes/print_interval))
+    for i in range(0, num_episodes):
         state, _ = env.reset()
         terminated = truncated = False
-        episode_rewards = []
         for t in range(max_steps):
             action = model(state)
             state, reward, terminated, truncated, _ = env.step(action)
             model.rewards.append(reward)
-            episode_rewards.append(reward)
             running_reward += reward
-
-            if t % N_bootstrap == 0 or terminated or truncated:  # Perform optimization step every X steps
-                optimizer.zero_grad()
-                loss = model.loss(gamma, entropy_weight=entropy_weight, use_baseline=use_baseline)
-                loss.backward()
-                optimizer.step()
-                model.clear()
-
             if terminated or truncated:
                 break
-        if method == "a2c":
+        if method == "sac":
             optimizer.zero_grad()
-            loss = model.loss(gamma, entropy_weight=entropy_weight, n_steps=n_steps, use_baseline=use_baseline)
+            loss = model.loss(gamma, entropy_weight=entropy_weight, n_steps=n_steps)
             loss.backward()
             optimizer.step()
             model.clear()
@@ -148,29 +142,12 @@ def train(render=False, gamma=0.99, lr=0.02, betas=(0.9, 0.999),
             break
 
         if i % print_interval == 0:
-            print('Episode {}\t mean reward: {:.2f}'.format(i + 1, np.mean(model.rewards_log[-print_interval:])))
-
-        model.rewards_log.append(sum(episode_rewards))
-
-
-
-    # Save data
-    directories = ['Data/rewards', 'Data/models']
-    for directory in directories:
-      if not os.path.exists(directory):
-        os.makedirs(directory)
-        print(f"Directory '{directory}' created successfully.")
-
-    with open(os.path.join('Data/rewards', 'Rewards_gamma={}_lr={}_betas={}_entropy={}_nsteps={}_numepisodes={}_methods={}_usebaseline={}_{}.csv'
-                                    .format(gamma, lr, betas, entropy_weight, n_steps, num_episodes, method, use_baseline, datetime.datetime.now().strftime("%d-%m_%H_%M"))), 'w') as file:
-        for reward in model.rewards_log:
-            file.write(str(reward) + '\n')
-    # Save model data
-    torch.save(model.state_dict(), os.path.join('Data/models',  'Model_gamma={}_lr={}_betas={}_entropy={}_nsteps={}_numepisodes={}_methods={}_usebaseline={}_{}.csv'
-                                    .format(gamma, lr, betas, entropy_weight, n_steps, num_episodes, method, use_baseline, datetime.datetime.now().strftime("%d-%m_%H_%M"))))
-
-    print('Done! Saved data to "{}" folder.'.format('Data'))
-    return model.rewards_log
+            running_reward = running_reward / print_interval
+            print('Episode {}\tmean reward: {:.2f}'.format(i + 1, running_reward))
+            export_reward[int(i / print_interval)] = running_reward
+            running_reward = 0
+    return export_reward
+    
 
 
 def main():
@@ -183,8 +160,7 @@ def main():
           num_episodes=1000,
           max_steps=10000,
           print_interval=10,
-          method = "a2c",
-          use_baseline = False)
+          method = "reinforce")
 
 if __name__ == '__main__':
     main()
