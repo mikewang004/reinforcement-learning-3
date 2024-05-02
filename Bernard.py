@@ -100,7 +100,7 @@ def reinforce(policy, optimizer, gamma):
 
 def train(render=False, gamma=0.99, lr=0.02, betas=(0.9, 0.999),
           entropy_weight=0.01, n_steps=5, num_episodes=1000,
-          max_steps=10000, print_interval=10, method = "a2c", use_baseline = True):
+          max_steps=10000, print_interval=10, method = "a2c", use_baseline = True, N_bootstrap = 5):
     """Note method can either be 'sac' or 'reinforce'"""
     if render:
         env = gym.make("LunarLander-v2", render_mode="human")
@@ -124,6 +124,7 @@ def train(render=False, gamma=0.99, lr=0.02, betas=(0.9, 0.999),
             running_reward += reward
 
             if t % N_bootstrap == 0 or terminated or truncated:  # Perform optimization step every X steps
+            #if t % max_steps == 0 or terminated or truncated: 
                 optimizer.zero_grad()
                 loss = model.loss(gamma, entropy_weight=entropy_weight, use_baseline=use_baseline)
                 loss.backward()
@@ -183,7 +184,7 @@ def main():
           num_episodes=1000,
           max_steps=10000,
           print_interval=10,
-          method = "a2c",
+          method = "reinforce",
           use_baseline = False)
 
 if __name__ == '__main__':
