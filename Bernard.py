@@ -104,7 +104,7 @@ def reinforce(policy, optimizer, gamma):
 def train(render=False, gamma=0.99, lr=0.02, betas=(0.9, 0.999),
           entropy_weight=0.01, n_steps=5, num_episodes=1000,
           max_steps=10000, print_interval=10, method="a2c", use_baseline=True,
-          update_frequency=5):  # Update frequency: Perform optimization step every X steps
+          N_bootstrap=5):  # Update frequency: Perform optimization step every X steps
     if render:
         env = gym.make("LunarLander-v2", render_mode="human")
         env.metadata['render_fps'] = 2048
@@ -126,7 +126,7 @@ def train(render=False, gamma=0.99, lr=0.02, betas=(0.9, 0.999),
             episode_rewards.append(reward)
             running_reward += reward
 
-            if t % update_frequency == 0 or terminated or truncated:  # Perform optimization step every X steps
+            if t % N_bootstrap == 0 or terminated or truncated:  # Perform optimization step every X steps
                 optimizer.zero_grad()
                 loss = model.loss(gamma, entropy_weight=entropy_weight, use_baseline=use_baseline)
                 loss.backward()
@@ -175,7 +175,7 @@ def main():
               print_interval=10,
               method="a2c",
               use_baseline=True,
-              update_frequency=200)
+              N_bootstrap=200)
 
     plt.plot(savgol_filter(rewards, 25, 3))
 
