@@ -22,7 +22,7 @@ method = "reinforce"
 
 export_reward_list = []
 
-reps = 10
+reps = 6
 
 for lr in lr_list:
     export_reward = np.zeros([reps, int(num_episodes/print_interval)])
@@ -38,7 +38,7 @@ for lr in lr_list:
             print_interval=print_interval,
             method = "reinforce")
 
-    avg = np.mean(export_reward)
+    avg = np.mean(export_reward, axis = 0)
 
     export_reward_list.append(avg)
 
