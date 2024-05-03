@@ -159,7 +159,11 @@ def train(render=False, gamma=0.99, lr=0.02, betas=(0.9, 0.999),
                                     .format(gamma, lr, betas, entropy_weight, n_steps, num_episodes, method, use_baseline, datetime.datetime.now().strftime("%d-%m_%H_%M"))))
 
     print('Done! Saved data to "{}" folder.'.format('Data'))
+
+    plt.title("Rewards per Episode")
+    plt.plot(savgol_filter(model.rewards_log, 25, 3))
     return model.rewards_log
+
 
 
 def main():
