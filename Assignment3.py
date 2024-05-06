@@ -225,11 +225,13 @@ def train(render = False, gamma=0.99, lr=0.02, betas=(0.9, 0.999),
           num_episodesstr = str(num_episodes).replace(".","__")
           methodstr = str(method).replace(".","__")
           use_baselinestr = str(use_baseline).replace(".","__")
+          N_bootstrapstr = str(N_bootstrap).replace(".","__")
           DateTime = str(datetime.datetime.now().strftime("%y-%m-%d_%H-%M-%S")).replace(".","__")
           with open(str('/home/Rewards_gamma-'+gammastr+'_lr-'+lrstr+
                     '_betas-'+betasstr+'_entropy-'+entropy_weightstr+
                     '_numepisodes-'+num_episodesstr+
                     '_method-'+methodstr+'_usebaseline-'+use_baselinestr+
+                    '_Nbootstrap-'+N_bootstrapstr+
                     '_'+DateTime+'.csv'), 'w') as file:
               for reward in rewards_lst:
                   file.write(str(reward) + '\n')
@@ -292,11 +294,13 @@ def train(render = False, gamma=0.99, lr=0.02, betas=(0.9, 0.999),
           num_episodesstr = str(num_episodes).replace(".","__")
           methodstr = str(method).replace(".","__")
           use_baselinestr = str(use_baseline).replace(".","__")
+          N_bootstrapstr = str(N_bootstrap).replace(".","__")
           DateTime = str(datetime.datetime.now().strftime("%y-%m-%d_%H-%M-%S")).replace(".","__")
           with open(str('Rewards_gamma-'+gammastr+'_lr-'+lrstr+
                     '_betas-'+betasstr+'_entropy-'+entropy_weightstr+
                     '_numepisodes-'+num_episodesstr+
                     '_method-'+methodstr+'_usebaseline-'+use_baselinestr+
+                    '_Nbootstrap-'+N_bootstrapstr+
                     '_'+DateTime+'.csv'), 'w') as file:
               for reward in model.rewards_log:
                   file.write(str(reward) + '\n')
